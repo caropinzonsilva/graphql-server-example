@@ -53,6 +53,9 @@ const resolvers = {
     books: () => Object.values(database.books),
     authors: () => Object.values(database.authors),
   },
+  Author: {
+    books: ({ id }) => Object.values(database.books).filter(book => book.authorId === id),
+  },
 };
 
 // In the most basic sense, the ApolloServer can be started
