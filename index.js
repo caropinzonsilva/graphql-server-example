@@ -6,20 +6,20 @@
   // from an existing data source like a REST API or database.
   const database = {
     books: {
-      'b9d110ec-b3c1-4ecc-9fc7-fd1c22b4521a': {
-        id: 'b9d110ec-b3c1-4ecc-9fc7-fd1c22b4521a',
+      'book_1': {
+        id: 'book_1',
         title: 'Cien años De soledad',
-        authorId: 'd9e63480-4729-4b76-be00-bdc4b5c913a1',
+        authorId: 'author_1',
       },
-      '73488bd3-44fa-412b-94a1-2be9d0441c45': {
-        id: '73488bd3-44fa-412b-94a1-2be9d0441c45',
+      'book_2': {
+        id: 'book_2',
         title: 'El amor en los tiempos del cólera',
-        authorId: 'd9e63480-4729-4b76-be00-bdc4b5c913a1',
+        authorId: 'author_1',
       }
     },
     authors: {
-      'd9e63480-4729-4b76-be00-bdc4b5c913a1': {
-        id: 'd9e63480-4729-4b76-be00-bdc4b5c913a1',
+      'd9e63480-4729-4b76-be00-author_1': {
+        id: 'author_1',
         name: 'Gabriel García Márquez',
         books: ['b9d110ec-b3c1-4ecc-9fc7-fd1c22b4521a', '73488bd3-44fa-412b-94a1-2be9d0441c45']
       }
@@ -48,6 +48,13 @@
       authorById(id: String!): Author
       search(text: String): [SearchResult]
     }
+    
+    input BookInput {
+      title: String!
+    }
+    type Mutation {
+      addAuthor(name: String!, books: [BookInput]): Author!
+    }
   `;
 
   // Resolvers define the technique for fetching the types in the
@@ -68,7 +75,32 @@
     },
     SearchResult: {
       __resolveType: searchResult => (searchResult.name ? 'Author' : 'Book'),
-    }
+    },
+    Mutation: {
+      addAuthor: (_, { name, books = [] }) => {
+        const authorId = uuid();
+        const booksWithId = books.reduce(
+          (acc, book) => {
+            const bookId = uuid();
+            acc[bookId] = {
+              id: bookId,
+              title: book.title,
+              authorId,
+            };
+            return acc;
+          },
+          {}
+        );
+        const author = {
+          id: authorId,
+          name,
+          books: Object.keys(booksWithId),
+        };
+        database.authors[author.id] = author;
+        Object.assign(database.books, booksWithId);
+        return author;
+      },
+    },
   };
 
   // In the most basic sense, the ApolloServer can be started
