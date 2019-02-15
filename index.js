@@ -40,11 +40,13 @@ const typeDefs = gql`
       books: [Book]
     }
     
+    union SearchResult = Book | Author
     type Query {
       books: [Book]
       authors: [Author]
       bookById(id: String!): Book
       authorById(id: String!): Author
+      search(text: String): [SearchResult]
     }
   `;
 
@@ -56,10 +58,17 @@ const resolvers = {
     authors: () => Object.values(database.authors),
     bookById: (_, { id }) => database.books[id],
     authorById: (_, { id }) => database.authors[id],
+    search: (_, { text }) => ([
+      ...Object.values(database.books).filter((book) => book.title.toLowerCase().includes(text.toLowerCase())),
+      ...Object.values(database.authors).filter((author) => author.name.toLowerCase().includes(text.toLowerCase()))
+    ]),
   },
   Author: {
     books: ({ id }) => Object.values(database.books).filter(book => book.authorId === id),
   },
+  SearchResult: {
+    __resolveType: searchResult => (searchResult.name ? 'Author' : 'Book'),
+  }
 };
 
 // In the most basic sense, the ApolloServer can be started
