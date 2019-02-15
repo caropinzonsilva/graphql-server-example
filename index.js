@@ -48,6 +48,13 @@ const typeDefs = gql`
       authorById(id: String!): Author
       search(text: String): [SearchResult]
     }
+    
+    input BookInput {
+      title: String!
+    }
+    type Mutation {
+      addAuthor(name: String!, books: [BookInput]): Author!
+    }
   `;
 
 // Resolvers define the technique for fetching the types in the
@@ -68,7 +75,32 @@ const resolvers = {
   },
   SearchResult: {
     __resolveType: searchResult => (searchResult.name ? 'Author' : 'Book'),
-  }
+  },
+  Mutation: {
+    addAuthor: (_, { name, books = [] }) => {
+      const authorId = uuid();
+      const booksWithId = books.reduce(
+        (acc, book) => {
+          const bookId = uuid();
+          acc[bookId] = {
+            id: bookId,
+            title: book.title,
+            authorId,
+          };
+          return acc;
+        },
+        {}
+      );
+      const author = {
+        id: authorId,
+        name,
+        books: Object.keys(booksWithId),
+      };
+      database.authors[author.id] = author;
+      Object.assign(database.books, booksWithId);
+      return author;
+    },
+  },
 };
 
 // In the most basic sense, the ApolloServer can be started
