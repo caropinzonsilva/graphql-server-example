@@ -43,6 +43,8 @@ const typeDefs = gql`
     type Query {
       books: [Book]
       authors: [Author]
+      bookById(id: String!): Book
+      authorById(id: String!): Author
     }
   `;
 
@@ -52,6 +54,8 @@ const resolvers = {
   Query: {
     books: () => Object.values(database.books),
     authors: () => Object.values(database.authors),
+    bookById: (_, { id }) => database.books[id],
+    authorById: (_, { id }) => database.authors[id],
   },
   Author: {
     books: ({ id }) => Object.values(database.books).filter(book => book.authorId === id),
