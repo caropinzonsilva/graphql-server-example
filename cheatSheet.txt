@@ -1,0 +1,58 @@
+--------------------- author resolver ---------------------
+Author: {
+  books: ({ id }) => Object.values(database.books).filter(book => book.authorId === id),
+},
+
+--------------------- with parameters ---------------------
+bookById(id: String!): Book
+    authorById(id: String!): Author
+bookById: (_, { id }) => database.books[id],
+authorById: (_, { id }) => database.authors[id],
+
+--------------------- multi type search ---------------------
+union SearchResult = Book | Author
+search(text: String): [SearchResult]
+
+search: (_, { text }) => ([
+  ...Object.values(database.books).filter((book) => book.title.toLowerCase().includes(text.toLowerCase())),
+  ...Object.values(database.authors).filter((author) => author.name.toLowerCase().includes(text.toLowerCase()))
+]),
+
+SearchResult: {
+  __resolveType: searchResult => (searchResult.name ? 'Author' : 'Book'),
+},
+
+--------------------- mutations ---------------------
+type Mutation {
+    addAuthor(name: String!, books: [BookInput]): Author!
+  }
+
+input BookInput {
+    title: String!
+  }
+
+Mutation: {
+  addAuthor: (_, { name, books = [] }) => {
+    const authorId = uuid();
+    const booksWithId = books.reduce(
+        (acc, book) => {
+          const bookId = uuid();
+          acc[bookId] = {
+            id: bookId,
+            title: book.title,
+            authorId,
+          };
+          return acc;
+        },
+        {}
+    );
+    const author = {
+      id: authorId,
+      name,
+      books: Object.keys(booksWithId),
+    };
+    database.authors[author.id] = author;
+    Object.assign(database.books, booksWithId);
+    return author;
+  },
+},
